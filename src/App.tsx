@@ -29,13 +29,8 @@ const FileUpload = () => {
         const base64Data = (reader.result as string).split(',')[1];
         
         const response = await axios.post(
-          'https://u65botpq5e.execute-api.us-east-1.amazonaws.com/dev/upload',
-          { file_data: base64Data },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
+          'https://5hyi7dh4nl.execute-api.us-east-1.amazonaws.com/dev/upload',
+          { file_data: base64Data }
         );
 
         if (response.status === 200) {
