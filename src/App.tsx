@@ -6,9 +6,13 @@ const FileUpload = () => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string>('');
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFile(event.target.files?.[0] || null);
+    const selectedFile = event.target.files?.[0] || null;
+    setFile(selectedFile);
+    setFileName(selectedFile ? selectedFile.name : '');
     setError(null);
   };
 
@@ -30,7 +34,9 @@ const FileUpload = () => {
         
         const response = await axios.post(
           'https://5hyi7dh4nl.execute-api.us-east-1.amazonaws.com/dev/upload',
-          { file_data: base64Data }
+          { file_data: base64Data,
+            file_name: fileName
+           }
         );
 
         if (response.status === 200) {
@@ -65,7 +71,6 @@ const FileUpload = () => {
 };
 
 export default FileUpload;
-
 
 /*
 import { useEffect, useState } from "react";
