@@ -2,50 +2,74 @@
 import { useState } from 'react';
 import axios from 'axios';
 
+interface FileInfo {
+  file: File;
+  name: string;
+  id: string; // Added to help with unique identification
+}
+
 const FileUpload = () => {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<FileInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string>('');
-
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0] || null;
-    setFile(selectedFile);
-    setFileName(selectedFile ? selectedFile.name : '');
+    const selectedFiles = Array.from(event.target.files || []);
+    const newFileInfos: FileInfo[] = selectedFiles.map(file => ({
+      file,
+      name: file.name,
+      id: `${file.name}-${Date.now()}-${Math.random()}`
+    }));
+    
+    // Combine existing files with new files
+    setFiles(prevFiles => [...prevFiles, ...newFileInfos]);
     setError(null);
+  };
+
+  const removeFile = (id: string) => {
+    setFiles(prevFiles => prevFiles.filter(file => file.id !== id));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
-    if (!file) {
-      setError('Please select a file');
+    if (files.length === 0) {
+      setError('Please select at least one file');
       return;
     }
 
     setLoading(true);
     
     try {
-      const reader = new FileReader();
-      
-      reader.onload = async () => {
-        const base64Data = (reader.result as string).split(',')[1];
+      const uploadPromises = files.map(async (fileInfo) => {
+        const reader = new FileReader();
         
-        const response = await axios.post(
-          'https://5hyi7dh4nl.execute-api.us-east-1.amazonaws.com/dev/upload',
-          { file_data: base64Data,
-            file_name: fileName
-           }
-        );
+        return new Promise((resolve, reject) => {
+          reader.onload = async () => {
+            const base64Data = (reader.result as string).split(',')[1];
+            
+            try {
+              const response = await axios.post(
+                'https://5hyi7dh4nl.execute-api.us-east-1.amazonaws.com/dev/upload',
+                { 
+                  file_data: base64Data,
+                  file_name: fileInfo.name
+                }
+              );
+              resolve(response);
+            } catch (err) {
+              reject(err);
+            }
+          };
 
-        if (response.status === 200) {
-          alert('File uploaded successfully!');
-          setFile(null);
-        }
-      };
+          reader.onerror = () => reject(new Error('File reading failed'));
+          reader.readAsDataURL(fileInfo.file);
+        });
+      });
 
-      reader.readAsDataURL(file);
+      await Promise.all(uploadPromises);
+      alert('All files uploaded successfully!');
+      setFiles([]);
     } catch (err) {
       setError('Upload failed: ' + (err as Error).message);
     } finally {
@@ -60,17 +84,53 @@ const FileUpload = () => {
           type="file"
           onChange={handleFileChange}
           disabled={loading}
+          multiple
         />
-        <button type="submit" disabled={loading || !file}>
+        <button type="submit" disabled={loading || files.length === 0}>
           {loading ? 'Uploading...' : 'Upload'}
         </button>
       </form>
+      {files.length > 0 && (
+        <div>
+          <p>Selected files:</p>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {files.map((fileInfo) => (
+              <li 
+                key={fileInfo.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '8px'
+                }}
+              >
+                <span>{fileInfo.name}</span>
+                <button
+                  onClick={() => removeFile(fileInfo.id)}
+                  style={{
+                    marginLeft: '10px',
+                    padding: '2px 6px',
+                    backgroundColor: '#ff4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   );
 };
 
 export default FileUpload;
+
+
 
 /*
 import { useEffect, useState } from "react";
