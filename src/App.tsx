@@ -1,45 +1,46 @@
-// FileUpload.tsx
 import { useState } from 'react';
 import axios from 'axios';
+import './App.css';
 
 interface FileInfo {
   file: File;
   name: string;
-  id: string; // Added to help with unique identification
+  id: string;
+  uploaded: boolean;
 }
 
-const FileUpload = () => {
+const App = () => {
   const [files, setFiles] = useState<FileInfo[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [message, setMessage] = useState<string>('');
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
-    const newFileInfos: FileInfo[] = selectedFiles.map(file => ({
+    const newFiles: FileInfo[] = selectedFiles.map(file => ({
       file,
       name: file.name,
-      id: `${file.name}-${Date.now()}-${Math.random()}`
+      id: `${file.name}-${Date.now()}-${Math.random()}`,
+      uploaded: false
     }));
     
-    // Combine existing files with new files
-    setFiles(prevFiles => [...prevFiles, ...newFileInfos]);
-    setError(null);
+    setFiles(prevFiles => [...prevFiles, ...newFiles]);
+    setMessage('');
   };
 
   const removeFile = (id: string) => {
     setFiles(prevFiles => prevFiles.filter(file => file.id !== id));
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    
+  const uploadFiles = async () => {
     if (files.length === 0) {
-      setError('Please select at least one file');
+      setMessage('Please select files first');
       return;
     }
 
-    setLoading(true);
-    
+    setUploading(true);
+    setMessage('Uploading files...');
+
     try {
       const uploadPromises = files.map(async (fileInfo) => {
         const reader = new FileReader();
@@ -49,14 +50,14 @@ const FileUpload = () => {
             const base64Data = (reader.result as string).split(',')[1];
             
             try {
-              const response = await axios.post(
+              await axios.post(
                 'https://5hyi7dh4nl.execute-api.us-east-1.amazonaws.com/dev/upload',
                 { 
                   file_data: base64Data,
                   file_name: fileInfo.name
                 }
               );
-              resolve(response);
+              resolve(fileInfo.id);
             } catch (err) {
               reject(err);
             }
@@ -68,115 +69,146 @@ const FileUpload = () => {
       });
 
       await Promise.all(uploadPromises);
-      alert('All files uploaded successfully!');
-      setFiles([]);
+      
+      // Mark all files as uploaded
+      setFiles(prevFiles => 
+        prevFiles.map(f => ({ ...f, uploaded: true }))
+      );
+      
+      setMessage('All files uploaded successfully! You can now process them.');
     } catch (err) {
-      setError('Upload failed: ' + (err as Error).message);
+      setMessage('Upload failed: ' + (err as Error).message);
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
+  const processFiles = async () => {
+    const uploadedFiles = files.filter(f => f.uploaded);
+    
+    if (uploadedFiles.length === 0) {
+      setMessage('No uploaded files to process');
+      return;
+    }
+
+    setProcessing(true);
+    setMessage('Processing files...');
+
+    try {
+      const response = await axios.post(
+        'https://5hyi7dh4nl.execute-api.us-east-1.amazonaws.com/dev/update',
+        {
+          Records: files.map(file => ({
+          s3: {
+            bucket: {
+              name: "sustainability-app-storage-1122"
+            },
+            object: {
+              key: `sustainability-app-storage-1122/${file.name}`
+            }
+          }
+        }))
+        }
+      );
+      
+      if (response.status === 200) {
+        setMessage('Files processed successfully! Knowledge base updated.');
+        setFiles([]);
+      }
+    } catch (err) {
+      setMessage('Processing failed: ' + (err as Error).message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const clearAll = () => {
+    setFiles([]);
+    setMessage('');
+  };
+
   return (
-    <div>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="file"
-          onChange={handleFileChange}
-          disabled={loading}
-          multiple
-        />
-        <button type="submit" disabled={loading || files.length === 0}>
-          {loading ? 'Uploading...' : 'Upload'}
-        </button>
-      </form>
+    <div className="app-container">
+      <h1>File Upload & Processing</h1>
+      
+      
+      <div className="upload-section">
+        <div className="file-input-wrapper">
+          <input
+            type="file"
+            onChange={handleFileSelect}
+            multiple
+            className="file-input"
+            id="file-upload"
+            disabled={uploading || processing}
+          />
+          <label htmlFor="file-upload" className="file-label">
+            📁 Choose Files
+          </label>
+        </div>
+      </div>
+
+      
       {files.length > 0 && (
-        <div>
-          <p>Selected files:</p>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+        <div className="files-section">
+          <div className="section-header">
+            <h3>Selected Files ({files.length})</h3>
+            <button onClick={clearAll} className="btn btn-clear">
+              Clear All
+            </button>
+          </div>
+          
+          <div className="file-list">
             {files.map((fileInfo) => (
-              <li 
-                key={fileInfo.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  marginBottom: '8px'
-                }}
-              >
-                <span>{fileInfo.name}</span>
+              <div key={fileInfo.id} className="file-item">
+                <div className="file-info">
+                  <span className="file-name">{fileInfo.name}</span>
+                  {fileInfo.uploaded && <span className="uploaded-badge">✓ Uploaded</span>}
+                </div>
                 <button
                   onClick={() => removeFile(fileInfo.id)}
-                  style={{
-                    marginLeft: '10px',
-                    padding: '2px 6px',
-                    backgroundColor: '#ff4444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '3px',
-                    cursor: 'pointer'
-                  }}
+                  className="btn btn-remove"
+                  disabled={uploading || processing}
                 >
-                  ✕
+                  ×
                 </button>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+
+     
+      {files.length > 0 && (
+        <div className="action-section">
+          <button 
+            onClick={uploadFiles}
+            disabled={uploading || processing || files.every(f => f.uploaded)}
+            className="btn btn-primary"
+          >
+            {uploading ? '⏳ Uploading...' : '📤 Upload Files'}
+          </button>
+          
+          {files.some(f => f.uploaded) && (
+            <button 
+              onClick={processFiles}
+              disabled={uploading || processing}
+              className="btn btn-success"
+            >
+              {processing ? '⏳ Processing...' : '⚡ Process Files'}
+            </button>
+          )}
+        </div>
+      )}
+
+      
+      {message && (
+        <div className={`message ${message.includes('failed') || message.includes('error') ? 'error' : 'success'}`}>
+          {message}
+        </div>
+      )}
     </div>
   );
 };
 
-export default FileUpload;
-
-
-
-/*
-import { useEffect, useState } from "react";
-import type { Schema } from "../amplify/data/resource";
-import { generateClient } from "aws-amplify/data";
-
-const client = generateClient<Schema>();
-
-function App() {
-  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
-
-  useEffect(() => {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
-    });
-  }, []);
-
-  function createTodo() {
-    client.models.Todo.create({ content: window.prompt("Todo content") });
-  }
-
-  function deleteTodo(id: string) {
-    client.models.Todo.delete({ id })
-  }
-
-  return (
-    <main>
-      <h1>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
-      <ul>
-        {todos.map((todo) => (
-          <li           
-          onClick={() => deleteTodo(todo.id)}
-          key={todo.id}>{todo.content}</li>
-        ))}
-      </ul>
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-          Review next step of this tutorial.
-        </a>
-      </div>
-    </main>
-  );
-}
-
 export default App;
-*/
