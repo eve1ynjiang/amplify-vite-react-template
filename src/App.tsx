@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import './App.css';
+import ChatInterface from './ChatInterface';
 
 interface FileInfo {
   file: File;
@@ -14,6 +15,8 @@ const App = () => {
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<string>('');
+  const [showChat, setShowChat] = useState(false);
+  const [filesProcessed, setFilesProcessed] = useState(false);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
@@ -26,6 +29,7 @@ const App = () => {
     
     setFiles(prevFiles => [...prevFiles, ...newFiles]);
     setMessage('');
+    setFilesProcessed(false);
   };
 
   const removeFile = (id: string) => {
@@ -98,22 +102,13 @@ const App = () => {
       const response = await axios.post(
         'https://5hyi7dh4nl.execute-api.us-east-1.amazonaws.com/dev/update',
         {
-          Records: files.map(file => ({
-          s3: {
-            bucket: {
-              name: "sustainability-app-storage-1122"
-            },
-            object: {
-              key: `sustainability-app-storage-1122/${file.name}`
-            }
-          }
-        }))
+          files: uploadedFiles.map(f => f.name)
         }
       );
       
       if (response.status === 200) {
-        setMessage('Files processed successfully! Knowledge base updated.');
-        setFiles([]);
+        setMessage('Files processed successfully! Knowledge base updated. You can now chat with your documents.');
+        setFilesProcessed(true);
       }
     } catch (err) {
       setMessage('Processing failed: ' + (err as Error).message);
@@ -125,13 +120,27 @@ const App = () => {
   const clearAll = () => {
     setFiles([]);
     setMessage('');
+    setFilesProcessed(false);
   };
+
+  const openChat = () => {
+    setShowChat(true);
+  };
+
+  const closeChat = () => {
+    setShowChat(false);
+  };
+
+  // Show chat interface if user clicked to open it
+  if (showChat) {
+    return <ChatInterface onBack={closeChat} />;
+  }
 
   return (
     <div className="app-container">
       <h1>File Upload & Processing</h1>
       
-      
+      {/* File Selection */}
       <div className="upload-section">
         <div className="file-input-wrapper">
           <input
@@ -148,7 +157,7 @@ const App = () => {
         </div>
       </div>
 
-      
+      {/* Selected Files */}
       {files.length > 0 && (
         <div className="files-section">
           <div className="section-header">
@@ -178,7 +187,7 @@ const App = () => {
         </div>
       )}
 
-     
+      {/* Action Buttons */}
       {files.length > 0 && (
         <div className="action-section">
           <button 
@@ -198,10 +207,19 @@ const App = () => {
               {processing ? '⏳ Processing...' : '⚡ Process Files'}
             </button>
           )}
+          
+          {filesProcessed && (
+            <button 
+              onClick={openChat}
+              className="btn btn-chat"
+            >
+              💬 Chat with Documents
+            </button>
+          )}
         </div>
       )}
 
-      
+      {/* Status Message */}
       {message && (
         <div className={`message ${message.includes('failed') || message.includes('error') ? 'error' : 'success'}`}>
           {message}

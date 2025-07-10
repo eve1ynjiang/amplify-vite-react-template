@@ -215,6 +215,15 @@ h1 {
   border: 1px solid #f5c6cb;
 }
 
+.btn-chat {
+  background: #6f42c1;
+  color: white;
+}
+
+.btn-chat:hover:not(:disabled) {
+  background: #5a32a3;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .app-container {
