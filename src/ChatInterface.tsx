@@ -341,7 +341,7 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
             >
               <div className="message-content">
                 <div className="message-text">{message.text}</div>
-                <div className="message-time">{formatTime(message.timestamp)}</div>
+                <div className="message-time"> {formatTime(message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp))}</div>
               </div>
             </div>
           ))}
