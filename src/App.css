@@ -52,7 +52,7 @@
 
 .chat-history-title {
   font-size: 14px;
-  color: #3C4F37;  /* Dark sage */
+  color: #212529;  /* Dark grey/almost black */
   margin: 0;
 }
 
@@ -81,7 +81,7 @@
 }
 
 .chat-history-list::-webkit-scrollbar-thumb:hover {
-  background: #4A6741;  /* Darker sage */
+  background: #6B9B5F;  /* Lighter sage green */
 }
 
 .chat-history-item {
@@ -99,13 +99,13 @@
 
 .chat-history-item:hover {
   background-color: #E8F1E7;  /* Light sage */
-  border-color: #4A6741;  /* Darker sage */
+  border-color: #6B9B5F;  /* Lighter sage green */
 }
 
 .chat-history-item.selected {
-  background-color: #8BA888;  /* Medium sage */
-  border-color: #4A6741;  /* Darker sage */
-  color: #F5F9F4;  /* Very light sage */
+  background-color: #6B9B5F;  /* Lighter sage green */
+  border-color: #6B9B5F;  /* Lighter sage green */
+  color: #ffffff;  /* White text for selected item */
 }
 
 .chat-history-item-content {
@@ -114,7 +114,7 @@
 }
 
 .chat-history-item-title {
-  color: #3C4F37;  /* Dark sage */
+  color: #212529;  /* Dark grey/almost black */
   margin-bottom: 4px;
   font-size: 13px;
   font-weight: 500;
@@ -123,9 +123,17 @@
   text-overflow: ellipsis;
 }
 
+.chat-history-item.selected .chat-history-item-title {
+  color: #ffffff;  /* White text for selected item */
+}
+
 .chat-history-item-date {
-  color: #4A6741;  /* Darker sage */
+  color: #6c757d;  /* Medium grey */
   font-size: 11px;
+}
+
+.chat-history-item.selected .chat-history-item-date {
+  color: rgba(255, 255, 255, 0.8);  /* Slightly transparent white for selected item */
 }
 
 .chat-history-delete-btn {
@@ -165,7 +173,7 @@
 .chat-history-empty {
   text-align: center;
   padding: 20px;
-  color: #4A6741;  /* Darker sage */
+  color: #6c757d;  /* Medium grey */
   font-size: 13px;
   background-color: #F5F9F4;  /* Very light sage */
   border-radius: 6px;
@@ -184,7 +192,7 @@
 .upload-title {
   margin: 0 0 10px 0;
   font-size: 14px;
-  color: #3C4F37;  /* Dark sage */
+  color: #212529;  /* Dark grey/almost black */
   text-align: center;
 }
 
@@ -204,8 +212,8 @@
 
 .file-label {
   padding: 8px 16px;
-  background-color: #4A6741;  /* Darker sage */
-  color: #F5F9F4;  /* Very light sage */
+  background-color: #6B9B5F;  /* Lighter sage green */
+  color: #ffffff;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -213,7 +221,7 @@
 }
 
 .file-label:hover {
-  background-color: #3C4F37;  /* Dark sage */
+  background-color: #4A6741;  /* Darker on hover */
 }
 
 .files-section {
@@ -232,7 +240,7 @@
 
 .section-header h3 {
   margin: 0;
-  color: #3C4F37;  /* Dark sage */
+  color: #212529;  /* Dark grey/almost black */
   font-size: 13px;
 }
 
@@ -262,12 +270,12 @@
 
 .file-name {
   font-size: 12px;
-  color: #3C4F37;  /* Dark sage */
+  color: #212529;  /* Dark grey/almost black */
 }
 
 .uploaded-badge {
-  background-color: #4A6741;  /* Darker sage */
-  color: #F5F9F4;  /* Very light sage */
+  background-color: #6B9B5F;  /* Lighter sage green */
+  color: #ffffff;
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 11px;
@@ -294,21 +302,21 @@
 }
 
 .btn-primary {
-  background-color: #4A6741;  /* Darker sage */
-  color: #F5F9F4;  /* Very light sage */
+  background-color: #6B9B5F;  /* Lighter sage green */
+  color: #ffffff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #3C4F37;  /* Dark sage */
+  background-color: #4A6741;  /* Darker on hover */
 }
 
 .btn-success {
-  background-color: #4A6741;  /* Darker sage */
-  color: #F5F9F4;  /* Very light sage */
+  background-color: #6B9B5F;  /* Lighter sage green */
+  color: #ffffff;
 }
 
 .btn-success:hover:not(:disabled) {
-  background-color: #3C4F37;  /* Dark sage */
+  background-color: #4A6741;  /* Darker on hover */
 }
 
 .btn-remove {
@@ -324,13 +332,13 @@
 
 .btn-clear {
   background-color: #8BA888;  /* Medium sage */
-  color: #F5F9F4;  /* Very light sage */
+  color: #ffffff;
   padding: 4px 8px;
   font-size: 11px;
 }
 
 .btn-clear:hover:not(:disabled) {
-  background-color: #4A6741;  /* Darker sage */
+  background-color: #6B9B5F;  /* Lighter sage green */
 }
 
 .message {
@@ -342,7 +350,7 @@
 
 .message.success {
   background-color: #E8F1E7;  /* Light sage */
-  color: #3C4F37;  /* Dark sage */
+  color: #212529;  /* Dark grey/almost black */
   border: 1px solid #8BA888;  /* Medium sage */
 }
 

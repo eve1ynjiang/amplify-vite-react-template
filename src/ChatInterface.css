@@ -29,12 +29,12 @@
 .header-center h2 {
   margin: 0;
   font-size: 1.2rem;
-  color: #3C4F37;
+  color: #212529;  /* Dark grey/almost black */
 }
 
 .conversation-title {
   font-size: 0.9rem;
-  color: #4A6741;
+  color: #6c757d;  /* Medium grey */
   margin-top: 5px;
 }
 
@@ -49,13 +49,13 @@
   align-items: center;
   gap: 8px;
   font-size: 0.8rem;
-  color: #4A6741;
+  color: #6c757d;  /* Medium grey */
 }
 
 .status-indicator {
   width: 8px;
   height: 8px;
-  background-color: #4A6741;
+  background-color: #6bc454;  /* Lighter sage green */
   border-radius: 50%;
 }
 
@@ -86,14 +86,14 @@
 }
 
 .user-message .message-content {
-  background-color: #659557;
+  background-color: #6B9B5F;  /* Lighter sage green */
   color: #ffffff;
   border-bottom-right-radius: 4px;
 }
 
 .bot-message .message-content {
   background-color: #f8f9fa;  /* Light grey */
-  color: #212529;
+  color: #212529;  /* Dark grey/almost black */
   border-bottom-left-radius: 4px;
 }
 
@@ -135,11 +135,11 @@
   max-height: 120px;
   min-height: 24px;
   background-color: #ffffff;
-  color: #3C4F37;
+  color: #212529;  /* Dark grey/almost black */
 }
 
 .send-button {
-  background-color: #4A6741;
+  background-color: #6B9B5F;  /* Lighter sage green */
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -149,7 +149,7 @@
 }
 
 .send-button:hover:not(:disabled) {
-  background-color: #3C4F37;
+  background-color: #4A6741;  /* Darker on hover */
 }
 
 .send-button:disabled {
@@ -159,7 +159,7 @@
 
 .input-hint {
   font-size: 0.8rem;
-  color: #4A6741;
+  color: #6c757d;  /* Medium grey */
   margin-top: 8px;
   text-align: center;
 }
@@ -170,18 +170,18 @@
   border: 1px solid #8BA888;
   border-radius: 6px;
   cursor: pointer;
-  color: #4A6741;
+  color: #212529;  /* Dark grey/almost black */
   transition: all 0.2s;
 }
 
 .back-button:hover {
   background-color: #F5F9F4;
-  color: #3f675d;
+  color: #212529;  /* Dark grey/almost black */
 }
 
 .new-conversation-button {
   padding: 8px 16px;
-  background-color: #55794c;
+  background-color: #6B9B5F;  /* Lighter sage green */
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -190,7 +190,7 @@
 }
 
 .new-conversation-button:hover {
-  background-color: #3C4F37;
+  background-color: #4A6741;  /* Darker on hover */
 }
 
 .loading-container {
@@ -206,7 +206,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid #F5F9F4;
-  border-top: 4px solid #4A6741;
+  border-top: 4px solid #6B9B5F;  /* Lighter sage green */
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -220,11 +220,12 @@
   gap: 20px;
   padding: 20px;
   text-align: center;
+  color: #212529;  /* Dark grey/almost black */
 }
 
 .retry-button {
   padding: 10px 20px;
-  background-color: #E76F51;  /* Keeping error button distinct */
+  background-color: #E76F51;  /* Coral for error/retry */
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -233,7 +234,7 @@
 }
 
 .retry-button:hover {
-  background-color: #D65F41;
+  background-color: #D65F41;  /* Darker coral */
 }
 
 .typing-indicator {
@@ -245,7 +246,7 @@
 .typing-indicator span {
   width: 8px;
   height: 8px;
-  background-color: #4A6741;
+  background-color: #6B9B5F;  /* Lighter sage green */
   border-radius: 50%;
   animation: bounce 1s infinite;
 }
