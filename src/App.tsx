@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 import ChatInterface from './ChatInterface';
+import ChatHistory from './ChatHistory';
+import { Conversation, chatHistoryAPI } from './services/chatHistoryApi';
 
 interface FileInfo {
   file: File;
@@ -15,8 +17,26 @@ const App = () => {
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<string>('');
-  const [showChat, setShowChat] = useState(false);
-  const [filesProcessed, setFilesProcessed] = useState(false);
+  const [, setFilesProcessed] = useState(false);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [, setConversations] = useState<Conversation[]>([]);
+
+  // Load conversations on component mount
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      const loadedConversations = await chatHistoryAPI.getAllConversations();
+      setConversations(loadedConversations);
+      if (loadedConversations.length > 0 && !currentConversation) {
+        setCurrentConversation(loadedConversations[0]);
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
@@ -29,7 +49,6 @@ const App = () => {
     
     setFiles(prevFiles => [...prevFiles, ...newFiles]);
     setMessage('');
-    setFilesProcessed(false);
   };
 
   const removeFile = (id: string) => {
@@ -123,108 +142,134 @@ const App = () => {
     setFilesProcessed(false);
   };
 
-  const openChat = () => {
-    setShowChat(true);
+  const handleSelectConversation = async (conversation: Conversation) => {
+    try {
+      // Load the full conversation from API
+      const fullConversation = await chatHistoryAPI.getConversation(conversation.id);
+      setCurrentConversation(fullConversation);
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      // Fallback to the conversation data we have
+      setCurrentConversation(conversation);
+    }
   };
 
-  const closeChat = () => {
-    setShowChat(false);
+  const handleNewConversation = async () => {
+    try {
+      const newConversation = await chatHistoryAPI.createConversation();
+      setCurrentConversation(newConversation);
+      await loadConversations(); // Reload the conversation list
+    } catch (error) {
+      console.error('Error creating new conversation:', error);
+    }
   };
-
-  // Show chat interface if user clicked to open it
-  if (showChat) {
-    return <ChatInterface onBack={closeChat} />;
-  }
 
   return (
     <div className="app-container">
-      <h1>File Upload & Processing</h1>
-      
-      {/* File Selection */}
-      <div className="upload-section">
-        <div className="file-input-wrapper">
-          <input
-            type="file"
-            onChange={handleFileSelect}
-            multiple
-            className="file-input"
-            id="file-upload"
-            disabled={uploading || processing}
+      <div className="split-layout">
+        <div className="upload-panel">
+          {/* Chat History */}
+          <ChatHistory
+            currentConversationId={currentConversation?.id || ''}
+            onSelectConversation={handleSelectConversation}
+            onNewConversation={handleNewConversation}
           />
-          <label htmlFor="file-upload" className="file-label">
-            📁 Choose Files
-          </label>
+
+          {/* File Upload Section */}
+          <div className="file-upload-section">
+            <h2 className="upload-title">Upload Files</h2>
+            
+            {/* File Selection */}
+            <div className="upload-section">
+              <div className="file-input-wrapper">
+                <input
+                  type="file"
+                  onChange={handleFileSelect}
+                  multiple
+                  className="file-input"
+                  id="file-upload"
+                  disabled={uploading || processing}
+                />
+                <label htmlFor="file-upload" className="file-label">
+                  Choose Files
+                </label>
+              </div>
+            </div>
+
+            {/* Selected Files */}
+            {files.length > 0 && (
+              <div className="files-section">
+                <div className="section-header">
+                  <h3>Selected Files ({files.length})</h3>
+                  <button onClick={clearAll} className="btn btn-clear">
+                    Clear All
+                  </button>
+                </div>
+                
+                <div className="file-list">
+                  {files.map((fileInfo) => (
+                    <div key={fileInfo.id} className="file-item">
+                      <div className="file-info">
+                        <span className="file-name">{fileInfo.name}</span>
+                        {fileInfo.uploaded && <span className="uploaded-badge">✓ Uploaded</span>}
+                      </div>
+                      <button
+                        onClick={() => removeFile(fileInfo.id)}
+                        className="btn btn-remove"
+                        disabled={uploading || processing}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            {files.length > 0 && (
+              <div className="action-section">
+                <button 
+                  onClick={uploadFiles}
+                  disabled={uploading || processing || files.every(f => f.uploaded)}
+                  className="btn btn-primary"
+                >
+                  {uploading ? '⏳ Uploading...' : '📤 Upload Files'}
+                </button>
+                
+                {files.some(f => f.uploaded) && (
+                  <button 
+                    onClick={processFiles}
+                    disabled={uploading || processing}
+                    className="btn btn-success"
+                  >
+                    {processing ? '⏳ Processing...' : '⚡ Process Files'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Status Message */}
+            {message && (
+              <div className={`message ${message.includes('failed') || message.includes('error') ? 'error' : 'success'}`}>
+                {message}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="chat-panel">
+          <ChatInterface 
+            embedded={true}
+            onBack={undefined}
+            currentConversation={currentConversation}
+            onConversationUpdate={(updatedConversation) => {
+              setCurrentConversation(updatedConversation);
+              loadConversations(); // Reload the conversation list when chat updates
+            }}
+          />
         </div>
       </div>
-
-      {/* Selected Files */}
-      {files.length > 0 && (
-        <div className="files-section">
-          <div className="section-header">
-            <h3>Selected Files ({files.length})</h3>
-            <button onClick={clearAll} className="btn btn-clear">
-              Clear All
-            </button>
-          </div>
-          
-          <div className="file-list">
-            {files.map((fileInfo) => (
-              <div key={fileInfo.id} className="file-item">
-                <div className="file-info">
-                  <span className="file-name">{fileInfo.name}</span>
-                  {fileInfo.uploaded && <span className="uploaded-badge">✓ Uploaded</span>}
-                </div>
-                <button
-                  onClick={() => removeFile(fileInfo.id)}
-                  className="btn btn-remove"
-                  disabled={uploading || processing}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      {files.length > 0 && (
-        <div className="action-section">
-          <button 
-            onClick={uploadFiles}
-            disabled={uploading || processing || files.every(f => f.uploaded)}
-            className="btn btn-primary"
-          >
-            {uploading ? '⏳ Uploading...' : '📤 Upload Files'}
-          </button>
-          
-          {files.some(f => f.uploaded) && (
-            <button 
-              onClick={processFiles}
-              disabled={uploading || processing}
-              className="btn btn-success"
-            >
-              {processing ? '⏳ Processing...' : '⚡ Process Files'}
-            </button>
-          )}
-          
-          {filesProcessed && (
-            <button 
-              onClick={openChat}
-              className="btn btn-chat"
-            >
-              💬 Chat with Documents
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Status Message */}
-      {message && (
-        <div className={`message ${message.includes('failed') || message.includes('error') ? 'error' : 'success'}`}>
-          {message}
-        </div>
-      )}
     </div>
   );
 };

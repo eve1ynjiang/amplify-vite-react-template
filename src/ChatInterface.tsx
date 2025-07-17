@@ -1,25 +1,36 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import ConversationSidebar from './ConversationSidebar';
 import { Conversation, Message, chatHistoryAPI } from './services/chatHistoryApi';
 import './ChatInterface.css';
 
 interface ChatInterfaceProps {
-  onBack: () => void;
+  onBack?: () => void;
+  embedded?: boolean;
+  currentConversation?: Conversation | null;
+  onConversationUpdate?: (conversation: Conversation) => void;
 }
 
-const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
+const ChatInterface = ({ 
+  onBack, 
+  embedded = false,
+  currentConversation: propConversation,
+  onConversationUpdate
+}: ChatInterfaceProps) => {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load initial conversation on component mount
+  // Use prop conversation if provided, otherwise load initial conversation
   useEffect(() => {
-    loadInitialConversation();
-  }, []);
+    if (propConversation) {
+      setCurrentConversation(propConversation);
+      setIsLoadingConversation(false);
+    } else {
+      loadInitialConversation();
+    }
+  }, [propConversation]);
 
   const loadInitialConversation = async () => {
     try {
@@ -68,25 +79,13 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
     }
   }, [currentConversation?.messages]);
 
-  const handleSelectConversation = async (conversation: Conversation) => {
-    try {
-      // Load the full conversation from API
-      const fullConversation = await chatHistoryAPI.getConversation(conversation.id);
-      setCurrentConversation(fullConversation);
-      setSidebarOpen(false);
-    } catch (error) {
-      console.error('Error loading conversation:', error);
-      // Fallback to the conversation data we have
-      setCurrentConversation(conversation);
-      setSidebarOpen(false);
-    }
-  };
-
   const handleNewConversation = async () => {
     try {
       const newConversation = await chatHistoryAPI.createConversation();
       setCurrentConversation(newConversation);
-      setSidebarOpen(false);
+      if (onConversationUpdate) {
+        onConversationUpdate(newConversation);
+      }
     } catch (error) {
       console.error('Error creating new conversation:', error);
       // Fallback to local conversation
@@ -104,13 +103,18 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
         createdAt: new Date()
       };
       setCurrentConversation(fallbackConversation);
-      setSidebarOpen(false);
+      if (onConversationUpdate) {
+        onConversationUpdate(fallbackConversation);
+      }
     }
   };
 
   const updateConversationInDB = async (updatedConversation: Conversation) => {
     try {
       await chatHistoryAPI.updateConversation(updatedConversation.id, updatedConversation);
+      if (onConversationUpdate) {
+        onConversationUpdate(updatedConversation);
+      }
     } catch (error) {
       console.error('Error saving conversation to database:', error);
       // Continue with local state even if DB save fails
@@ -281,7 +285,7 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
 
   if (isLoadingConversation) {
     return (
-      <div className="chat-container">
+      <div className={`chat-container ${embedded ? 'embedded' : ''}`}>
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>Loading your conversations...</p>
@@ -292,7 +296,7 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
 
   if (!currentConversation) {
     return (
-      <div className="chat-container">
+      <div className={`chat-container ${embedded ? 'embedded' : ''}`}>
         <div className="error-container">
           <p>Failed to load conversation. Please try refreshing the page.</p>
           <button onClick={loadInitialConversation} className="retry-button">
@@ -304,88 +308,80 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
   }
 
   return (
-    <>
-      <ConversationSidebar
-        currentConversationId={currentConversation.id}
-        onSelectConversation={handleSelectConversation}
-        onNewConversation={handleNewConversation}
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
-      
-      <div className={`chat-container ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <div className="chat-header">
+    <div className={`chat-container ${embedded ? 'embedded' : ''}`}>
+      <div className="chat-header">
+        {!embedded && onBack && (
           <button onClick={onBack} className="back-button">
             ← Back to Upload
           </button>
-          <div className="header-center">
-            <h2>EcoAdvisor - Internal Sustainability Consultant</h2>
-            <div className="conversation-title">{currentConversation.title}</div>
-          </div>
-          <div className="header-actions">
-            <button onClick={handleNewConversation} className="new-conversation-button">
-              🔄 New Chat
-            </button>
-            <div className="chat-status">
-              <span className="status-indicator"></span>
-              Connected {currentConversation.sessionId && '(Session Active)'}
-            </div>
-          </div>
+        )}
+        <div className="header-center">
+          <h2>EcoAdvisor - Internal Sustainability Consultant</h2>
+          <div className="conversation-title">{currentConversation.title}</div>
         </div>
-
-        <div className="chat-messages">
-          {currentConversation.messages.map((message) => (
-            <div
-              key={message.id}
-              className={`message ${message.isUser ? 'user-message' : 'bot-message'}`}
-            >
-              <div className="message-content">
-                <div className="message-text">{message.text}</div>
-                <div className="message-time"> {formatTime(message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp))}</div>
-              </div>
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div className="message bot-message">
-              <div className="message-content">
-                <div className="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="chat-input-container">
-          <div className="chat-input-wrapper">
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask about our sustainability strategy and next steps..."
-              className="chat-input"
-              rows={1}
-              disabled={isLoading}
-            />
-            <button
-              onClick={sendMessage}
-              disabled={!inputText.trim() || isLoading}
-              className="send-button"
-            >
-              {isLoading ? '⏳' : '📤'}
-            </button>
-          </div>
-          <div className="input-hint">
-            Press Enter to send, Shift+Enter for new line
+        <div className="header-actions">
+          <button onClick={handleNewConversation} className="new-conversation-button">
+            New Chat
+          </button>
+          <div className="chat-status">
+            <span className="status-indicator"></span>
+            Connected {currentConversation.sessionId && '(Session Active)'}
           </div>
         </div>
       </div>
-    </>
+
+      <div className="chat-messages">
+        {currentConversation.messages.map((message) => (
+          <div
+            key={message.id}
+            className={`message ${message.isUser ? 'user-message' : 'bot-message'}`}
+          >
+            <div className="message-content">
+              <div className="message-text">{message.text}</div>
+              <div className="message-time">{formatTime(message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp))}</div>
+            </div>
+          </div>
+        ))}
+        
+        {isLoading && (
+          <div className="message bot-message">
+            <div className="message-content">
+              <div className="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="chat-input-container">
+        <div className="chat-input-wrapper">
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask about our sustainability strategy and next steps..."
+            className="chat-input"
+            rows={1}
+            disabled={isLoading}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!inputText.trim() || isLoading}
+            className="send-button"
+          >
+            {isLoading ? '⏳' : '📤'}
+          </button>
+        </div>
+        <div className="input-hint">
+          Press Enter to send, Shift+Enter for new line
+        </div>
+      </div>
+    </div>
   );
 };
 
