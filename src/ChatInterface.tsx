@@ -25,8 +25,18 @@ const ChatInterface = ({
   // Use prop conversation if provided, otherwise load initial conversation
   useEffect(() => {
     if (propConversation) {
-      setCurrentConversation(propConversation);
-      setIsLoadingConversation(false);
+      // Ensure we're getting the latest version of the conversation
+      const loadLatestConversation = async () => {
+        try {
+          const latestConversation = await chatHistoryAPI.getConversation(propConversation.id);
+          setCurrentConversation(latestConversation);
+        } catch (error) {
+          console.error('Error loading latest conversation:', error);
+          setCurrentConversation(propConversation);
+        }
+        setIsLoadingConversation(false);
+      };
+      loadLatestConversation();
     } else {
       loadInitialConversation();
     }
@@ -41,11 +51,33 @@ const ChatInterface = ({
       
       if (conversations.length > 0) {
         // Load the most recent conversation
-        setCurrentConversation(conversations[0]);
+        const latestConversation = await chatHistoryAPI.getConversation(conversations[0].id);
+        setCurrentConversation(latestConversation);
       } else {
-        // Create a new conversation if none exist
+        // Create a new conversation with welcome message
+        const welcomeMessage = {
+          id: '1',
+          text: "Hello! I'm EcoAdvisor, your internal sustainability consultant. I'm familiar with our company's current sustainability initiatives, goals, and challenges. I can help you develop specific recommendations that build on our existing programs and align with our corporate sustainability strategy. What sustainability opportunity would you like to explore?",
+          isUser: false,
+          timestamp: new Date()
+        };
+
         const newConversation = await chatHistoryAPI.createConversation();
-        setCurrentConversation(newConversation);
+        const conversationWithWelcome = {
+          ...newConversation,
+          messages: [welcomeMessage],
+          lastUpdated: new Date()
+        };
+        
+        // Update the conversation in the database with welcome message
+        const savedConversation = await chatHistoryAPI.updateConversation(
+          newConversation.id,
+          conversationWithWelcome
+        );
+
+        // Fetch the conversation again to ensure we have the latest state
+        const confirmedConversation = await chatHistoryAPI.getConversation(savedConversation.id);
+        setCurrentConversation(confirmedConversation);
       }
     } catch (error) {
       console.error('Error loading initial conversation:', error);
@@ -78,36 +110,6 @@ const ChatInterface = ({
       scrollToBottom();
     }
   }, [currentConversation?.messages]);
-
-  const handleNewConversation = async () => {
-    try {
-      const newConversation = await chatHistoryAPI.createConversation();
-      setCurrentConversation(newConversation);
-      if (onConversationUpdate) {
-        onConversationUpdate(newConversation);
-      }
-    } catch (error) {
-      console.error('Error creating new conversation:', error);
-      // Fallback to local conversation
-      const fallbackConversation = {
-        id: Date.now().toString(),
-        title: 'New Conversation',
-        sessionId: '',
-        messages: [{
-          id: '1',
-          text: "Hello! I'm EcoAdvisor, your internal sustainability consultant. I'm familiar with our company's current sustainability initiatives, goals, and challenges. I can help you develop specific recommendations that build on our existing programs and align with our corporate sustainability strategy. What sustainability opportunity would you like to explore?",
-          isUser: false,
-          timestamp: new Date()
-        }],
-        lastUpdated: new Date(),
-        createdAt: new Date()
-      };
-      setCurrentConversation(fallbackConversation);
-      if (onConversationUpdate) {
-        onConversationUpdate(fallbackConversation);
-      }
-    }
-  };
 
   const updateConversationInDB = async (updatedConversation: Conversation) => {
     try {
@@ -147,7 +149,7 @@ const ChatInterface = ({
     };
 
     // Update conversation with user message locally first
-    const updatedMessages = [...currentConversation.messages, userMessage];
+    const updatedMessages = [...(currentConversation.messages || []), userMessage];
     const updatedConversation = {
       ...currentConversation,
       messages: updatedMessages,
@@ -159,6 +161,9 @@ const ChatInterface = ({
     setIsLoading(true);
 
     try {
+      // Save user message to database first
+      await updateConversationInDB(updatedConversation);
+
       // Send request to your chat endpoint with session management
       console.log('Sending chat request:', {
         question: question,
@@ -242,7 +247,12 @@ const ChatInterface = ({
       setCurrentConversation(finalConversation);
       
       // Save to database
-      await updateConversationInDB(finalConversation);
+      const savedConversation = await chatHistoryAPI.updateConversation(finalConversation.id, finalConversation);
+      setCurrentConversation(savedConversation);
+      
+      if (onConversationUpdate) {
+        onConversationUpdate(savedConversation);
+      }
       
       // Update title if this is a new conversation
       await updateConversationTitle(finalMessages);
@@ -320,9 +330,6 @@ const ChatInterface = ({
           <div className="conversation-title">{currentConversation.title}</div>
         </div>
         <div className="header-actions">
-          <button onClick={handleNewConversation} className="new-conversation-button">
-            New Chat
-          </button>
           <div className="chat-status">
             <span className="status-indicator"></span>
             Connected {currentConversation.sessionId && '(Session Active)'}

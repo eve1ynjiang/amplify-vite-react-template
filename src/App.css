@@ -48,12 +48,34 @@
 
 .chat-history-header {
   margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 4px;
 }
 
 .chat-history-title {
   font-size: 14px;
   color: #212529;  /* Dark grey/almost black */
   margin: 0;
+}
+
+.new-conversation-button {
+  padding: 4px 8px;  /* Smaller padding */
+  background-color: #6B9B5F;  /* Lighter sage green */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 14px;  /* Match Chat History title size */
+  min-height: 28px;  /* Ensure consistent height */
+  display: flex;
+  align-items: center;
+}
+
+.new-conversation-button:hover {
+  background-color: #4A6741;
 }
 
 .chat-history-list {

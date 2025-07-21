@@ -17,31 +17,56 @@ const ChatHistory = ({
 
   useEffect(() => {
     loadConversations();
-  }, []);
+  }, [currentConversationId]);
 
   const loadConversations = async () => {
+    console.log('ChatHistory: Loading conversations...');
     try {
       const loadedConversations = await chatHistoryAPI.getAllConversations();
+      console.log('ChatHistory: Loaded conversations:', loadedConversations);
       setConversations(loadedConversations);
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      console.error('ChatHistory: Error loading conversations:', error);
     }
   };
 
+  const handleNewChat = () => {
+    // Only call onNewConversation, which will handle the creation
+    onNewConversation();
+  };
+
   const handleDelete = async (event: React.MouseEvent, conversationId: string) => {
-    event.stopPropagation(); // Prevent triggering the conversation selection
+    event.stopPropagation();
     
     if (window.confirm('Are you sure you want to delete this conversation?')) {
       setIsDeleting(conversationId);
       try {
         await chatHistoryAPI.deleteConversation(conversationId);
-        // Remove the conversation from the local state
-        setConversations(prevConversations => 
-          prevConversations.filter(conv => conv.id !== conversationId)
-        );
-        // If the deleted conversation was selected, create a new one
+        
+        // Find the index of the deleted conversation
+        const deletedIndex = conversations.findIndex(conv => conv.id === conversationId);
+        
+        // Remove the deleted conversation from the state
+        const updatedConversations = conversations.filter(conv => conv.id !== conversationId);
+        setConversations(updatedConversations);
+
+        // If the deleted conversation was selected
         if (conversationId === currentConversationId) {
-          onNewConversation();
+          if (updatedConversations.length > 0) {
+            // If there was a next conversation, select it
+            // Otherwise, select the previous conversation
+            const nextConversation = updatedConversations[deletedIndex] || 
+                                   updatedConversations[deletedIndex - 1];
+            if (nextConversation) {
+              onSelectConversation(nextConversation);
+            } else {
+              // If no conversations left, create a new one
+              onNewConversation();
+            }
+          } else {
+            // If no conversations left, create a new one
+            onNewConversation();
+          }
         }
       } catch (error) {
         console.error('Error deleting conversation:', error);
@@ -56,7 +81,6 @@ const ChatHistory = ({
     const now = new Date();
     const conversationDate = new Date(date);
     
-    // If the conversation is from today, show only time
     if (conversationDate.toDateString() === now.toDateString()) {
       return conversationDate.toLocaleTimeString([], { 
         hour: '2-digit', 
@@ -64,7 +88,6 @@ const ChatHistory = ({
       });
     }
     
-    // If the conversation is from this year, show month and day
     if (conversationDate.getFullYear() === now.getFullYear()) {
       return conversationDate.toLocaleDateString(undefined, {
         month: 'short',
@@ -72,7 +95,6 @@ const ChatHistory = ({
       });
     }
     
-    // Otherwise show full date
     return conversationDate.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
@@ -84,6 +106,9 @@ const ChatHistory = ({
     <div className="chat-history-section">
       <div className="chat-history-header">
         <h3 className="chat-history-title">Chat History</h3>
+        <button onClick={handleNewChat} className="new-conversation-button">
+          New Chat
+        </button>
       </div>
 
       <div className="chat-history-list">

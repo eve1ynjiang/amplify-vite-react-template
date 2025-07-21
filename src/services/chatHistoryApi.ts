@@ -66,26 +66,36 @@ class ChatHistoryAPI {
 
   async getAllConversations(): Promise<Conversation[]> {
     try {
-      console.log('Fetching conversations from:', `${API_BASE_URL}/conversations`);
-      console.log('Headers:', this.getHeaders());
+      const url = `${API_BASE_URL}/conversations`;
+      console.log('API: Fetching conversations from:', url);
+      console.log('API: Using headers:', this.getHeaders());
       
-      const response = await axios.get(`${API_BASE_URL}/conversations`, {
+      const response = await axios.get(url, {
         headers: this.getHeaders(),
-        timeout: 10000 // 10 second timeout
+        timeout: 10000
       });
       
+      console.log('API: Raw response:', response);
       const data = this.parseApiResponse(response);
+      console.log('API: Parsed data:', data);
       
       if (!Array.isArray(data)) {
-        console.warn('Expected array but got:', typeof data, data);
+        console.warn('API: Expected array but got:', typeof data, data);
         return [];
       }
       
-      return data.map((conv: any) => this.formatConversation(conv));
+      const formattedConversations = data.map((conv: any) => this.formatConversation(conv));
+      console.log('API: Formatted conversations:', formattedConversations);
+      return formattedConversations;
     } catch (error: any) {
-      console.error('Error fetching conversations:', error);
+      console.error('API: Error fetching conversations:', error);
+      console.error('API: Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       
-      // More specific error handling
       if (error.code === 'ERR_NETWORK') {
         throw new Error('Network error - check CORS configuration');
       } else if (error.response?.status === 403) {
@@ -117,15 +127,32 @@ class ChatHistoryAPI {
     try {
       console.log('Creating conversation with title:', title);
       
-      const response = await axios.post(`${API_BASE_URL}/conversations`, {
-        title: title || 'New Conversation'
-      }, {
-        headers: this.getHeaders(),
-        timeout: 10000
-      });
+      // Create initial conversation data with welcome message
+      const welcomeMessage = {
+        id: '1',
+        text: "Hello! I'm EcoAdvisor, your internal sustainability consultant. I'm familiar with our company's current sustainability initiatives, goals, and challenges. I can help you develop specific recommendations that build on our existing programs and align with our corporate sustainability strategy. What sustainability opportunity would you like to explore?",
+        isUser: false,
+        timestamp: new Date()
+      };
+
+      const initialData = {
+        title: title || 'New Conversation',
+        messages: [welcomeMessage]
+      };
+      
+      const response = await axios.post(
+        `${API_BASE_URL}/conversations`,
+        initialData,
+        {
+          headers: this.getHeaders(),
+          timeout: 10000
+        }
+      );
       
       const data = this.parseApiResponse(response);
-      return this.formatConversation(data);
+      const formattedConversation = this.formatConversation(data);
+      console.log('Created conversation:', formattedConversation);
+      return formattedConversation;
     } catch (error) {
       console.error('Error creating conversation:', error);
       throw new Error('Failed to create conversation');
@@ -134,7 +161,7 @@ class ChatHistoryAPI {
 
   async updateConversation(conversationId: string, updates: Partial<Conversation>): Promise<Conversation> {
     try {
-      // Convert Date objects back to timestamps for API
+      // Ensure messages array is included in the update
       const apiUpdates = {
         ...updates,
         messages: updates.messages?.map(msg => ({
@@ -145,13 +172,19 @@ class ChatHistoryAPI {
 
       console.log('Updating conversation:', conversationId, 'with:', apiUpdates);
       
-      const response = await axios.put(`${API_BASE_URL}/conversations/${conversationId}`, apiUpdates, {
-        headers: this.getHeaders(),
-        timeout: 10000
-      });
+      const response = await axios.put(
+        `${API_BASE_URL}/conversations/${conversationId}`,
+        apiUpdates,
+        {
+          headers: this.getHeaders(),
+          timeout: 10000
+        }
+      );
       
       const data = this.parseApiResponse(response);
-      return this.formatConversation(data);
+      const formattedConversation = this.formatConversation(data);
+      console.log('Updated conversation:', formattedConversation);
+      return formattedConversation;
     } catch (error) {
       console.error('Error updating conversation:', error);
       throw new Error('Failed to update conversation');

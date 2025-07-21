@@ -4,6 +4,7 @@ import './App.css';
 import ChatInterface from './ChatInterface';
 import ChatHistory from './ChatHistory';
 import { Conversation, chatHistoryAPI } from './services/chatHistoryApi';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 
 interface FileInfo {
   file: File;
@@ -20,6 +21,7 @@ const App = () => {
   const [, setFilesProcessed] = useState(false);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [, setConversations] = useState<Conversation[]>([]);
+    const { signOut } = useAuthenticator();
 
   // Load conversations on component mount
   useEffect(() => {
@@ -28,11 +30,34 @@ const App = () => {
 
   const loadConversations = async () => {
     try {
+      console.log('=== Loading conversations ===');
       const loadedConversations = await chatHistoryAPI.getAllConversations();
+      console.log('Loaded conversations:', loadedConversations);
+      
       setConversations(loadedConversations);
+      console.log('Set conversations state');
+      
+      // Only set a new current conversation if we don't have one
       if (loadedConversations.length > 0 && !currentConversation) {
+        console.log('Setting first conversation as current');
         setCurrentConversation(loadedConversations[0]);
+      } else if (currentConversation) {
+        // If we have a current conversation, update it with the latest data from the server
+        // but only if the server version is newer
+        const serverVersion = loadedConversations.find(conv => conv.id === currentConversation.id);
+        if (serverVersion) {
+          const serverTime = new Date(serverVersion.lastUpdated).getTime();
+          const currentTime = new Date(currentConversation.lastUpdated).getTime();
+          
+          if (serverTime > currentTime) {
+            console.log('Updating current conversation with newer server version');
+            setCurrentConversation(serverVersion);
+          } else {
+            console.log('Keeping current conversation (it\'s newer than server version)');
+          }
+        }
       }
+      console.log('Current conversation after load:', currentConversation);
     } catch (error) {
       console.error('Error loading conversations:', error);
     }
@@ -156,9 +181,21 @@ const App = () => {
 
   const handleNewConversation = async () => {
     try {
+      console.log('=== Creating new conversation ===');
+      
+      // Create conversation - the API already includes the welcome message
       const newConversation = await chatHistoryAPI.createConversation();
+      console.log('1. Created conversation:', newConversation);
+      
+      // Set as current conversation immediately
       setCurrentConversation(newConversation);
-      await loadConversations(); // Reload the conversation list
+      console.log('2. Set as current conversation');
+      
+      // Reload conversations to update the sidebar list
+      console.log('3. About to reload conversations...');
+      await loadConversations();
+      console.log('4. Conversations reloaded');
+
     } catch (error) {
       console.error('Error creating new conversation:', error);
     }
@@ -265,11 +302,11 @@ const App = () => {
             currentConversation={currentConversation}
             onConversationUpdate={(updatedConversation) => {
               setCurrentConversation(updatedConversation);
-              loadConversations(); // Reload the conversation list when chat updates
             }}
           />
         </div>
       </div>
+          <button onClick={signOut}>Sign out</button>
     </div>
   );
 };
